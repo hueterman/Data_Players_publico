@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titulo %}Seguimiento de jugadores{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
+  <script>
+    /* Aplica el tema guardado antes de pintar, para evitar el parpadeo. */
+    try { var t = localStorage.getItem('tema'); if (t) document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  {% set ep = request.endpoint %}
+  <header class="topbar">
+    <div class="topbar-in">
+      <a class="marca" href="{{ url_for('routes.index') }}"><span class="balon"></span>Data <b>Players</b></a>
+      <nav class="menu">
+        <a href="{{ url_for('routes.index') }}" class="{{ 'activo' if ep in ('routes.index', 'routes.detalle_jugador') }}">Jugadores</a>
+        <a href="{{ url_for('routes.buscar_texto') }}" class="{{ 'activo' if ep == 'routes.buscar_texto' }}">Texto libre</a>
+        <a href="{{ url_for('routes.buscar_estadisticas') }}" class="{{ 'activo' if ep == 'routes.buscar_estadisticas' }}">Estadísticas</a>
+        <a href="{{ url_for('routes.proyecciones') }}" class="{{ 'activo' if ep == 'routes.proyecciones' }}">Proyecciones</a>
+        <a href="{{ url_for('routes.entrenadores') }}" class="{{ 'activo' if ep == 'routes.entrenadores' }}">Entrenadores</a>
+        <details class="desplegable" style="margin-left:auto">
+          <summary>＋ Añadir ▾</summary>
+          <div class="panel">
+            <a href="{{ url_for('routes.nuevo_jugador') }}">Jugador</a>
+            <a href="{{ url_for('routes.nuevo_equipo') }}">Equipo</a>
+            <a href="{{ url_for('routes.nueva_lesion') }}">Lesión</a>
+            <a href="{{ url_for('routes.nuevo_dato_economico') }}">Dato económico</a>
+          </div>
+        </details>
+      </nav>
+      <button class="tema-btn" id="tema-btn" type="button" title="Cambiar tema claro/oscuro" aria-label="Cambiar tema">🌓</button>
+    </div>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+  <script>
+    document.getElementById('tema-btn').addEventListener('click', function () {
+      var r = document.documentElement;
+      var oscuro = r.getAttribute('data-theme') === 'dark' ||
+        (!r.getAttribute('data-theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      var nuevo = oscuro ? 'light' : 'dark';
+      r.setAttribute('data-theme', nuevo);
+      try { localStorage.setItem('tema', nuevo); } catch (e) {}
+    });
+    /* Cierra el menú "Añadir" al hacer clic fuera. */
+    document.addEventListener('click', function (e) {
+      document.querySelectorAll('details.desplegable[open]').forEach(function (d) { if (!d.contains(e.target)) d.removeAttribute('open'); });
+    });
+  </script>
+</body>
+</html>

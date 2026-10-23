@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Jugadores</h1>
+
+{% if genero_disponible %}
+{% set g = filtros['genero_id'] %}
+{% set total = (totales_genero.get(1, 0) + totales_genero.get(2, 0)) %}
+<div class="segmentado" role="tablist" aria-label="Género">
+  <a href="{{ url_for('routes.index', **args_sin_genero) }}" class="{{ 'on' if not g }}">Todos <span class="n">{{ total }}</span></a>
+  <a href="{{ url_for('routes.index', genero_id=1, **args_sin_genero) }}" class="m {{ 'on' if g == 1 }}">🏀 Masculino <span class="n">{{ totales_genero.get(1, 0) }}</span></a>
+  <a href="{{ url_for('routes.index', genero_id=2, **args_sin_genero) }}" class="f {{ 'on' if g == 2 }}">🏀 Femenino <span class="n">{{ totales_genero.get(2, 0) }}</span></a>
+</div>
+{% endif %}
+
+<form method="get" action="{{ url_for('routes.index') }}" class="filtros">
+  {% if filtros['genero_id'] %}<input type="hidden" name="genero_id" value="{{ filtros['genero_id'] }}">{% endif %}
+  <div class="filtros-grid">
+    <label class="ancho2">Buscar (nombre, apellidos, nacionalidad o equipo actual)
+      <input type="text" name="q" value="{{ filtros['q'] }}" placeholder="ej. Llull, Francia, Madrid...">
+    </label>
+
+    <label>Posición
+      <select name="posicion_id">
+        <option value="">Todas</option>
+        {% for p in posiciones %}
+        <option value="{{ p['id'] }}" {% if filtros['posicion_id'] == p['id'] %}selected{% endif %}>{{ p['nombre'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Estado
+      <select name="estado_id">
+        <option value="">Todos</option>
+        {% for e in estados %}
+        <option value="{{ e['id'] }}" {% if filtros['estado_id'] == e['id'] %}selected{% endif %}>{{ e['nombre'] }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+    <label>Nacionalidad
+      <select name="nacionalidad">
+        <option value="">Todas</option>
+        {% for n in nacionalidades %}
+        <option value="{{ n }}" {% if filtros['nacionalidad'] == n %}selected{% endif %}>{{ n }}</option>
+        {% endfor %}
+      </select>
+    </label>
+
+
+    <label class="ancho2">Equipo actual
+      <select name="equipo_id">
+        <option value="">Todos</option>
+        {% for eq in equipos %}
+        <option value="{{ eq['id'] }}" {% if filtros['equipo_id'] == eq['id'] %}selected{% endif %}>{{ eq['nombre'] }} ({{ eq['competicion'] or '-' }})</option>
+        {% endfor %}
+      </select>
+    </label>
+  </div>
+
+  <details {% if filtros['altura_min'] or filtros['altura_max'] or filtros['edad_min'] or filtros['edad_max'] %}open{% endif %}>
+    <summary>Más filtros (altura y edad)</summary>
+    <div class="filtros-grid">
+      <label>Altura mínima (cm)
+        <input type="number" name="altura_min" value="{{ filtros['altura_min'] or '' }}">
+      </label>
+      <label>Altura máxima (cm)
+        <input type="number" name="altura_max" value="{{ filtros['altura_max'] or '' }}">
+      </label>
+      <label>Edad mínima
+        <input type="number" name="edad_min" value="{{ filtros['edad_min'] or '' }}">
+      </label>
+      <label>Edad máxima
+        <input type="number" name="edad_max" value="{{ filtros['edad_max'] or '' }}">
+      </label>
+    </div>
+  </details>
+
+  <div class="filtros-acciones">
+    <button type="submit">Buscar</button>
+    <a href="{{ url_for('routes.index', genero_id=filtros['genero_id']) if filtros['genero_id'] else url_for('routes.index') }}">Limpiar filtros</a>
+  </div>
+</form>
+
+{% if jugadores %}
+<div class="tabla-scroll">
+<table>
+  <tr>
+    <th>Jugador{{ '/a' if not filtros['genero_id'] }}</th><th>Posición</th><th>Estado</th><th>Equipo actual</th><th>Nacionalidad</th><th>Altura</th>
+  </tr>
+  {% for j in jugadores %}
+  <tr>
+    <td>
+      {% if j["foto_url"] %}<img class="avatar" src="{{ j['foto_url'] }}" alt="" loading="lazy" onerror="this.style.display='none'">{% else %}<span class="avatar-ini">{{ (j["nombre"][:1] ~ j["apellidos"][:1])|upper }}</span>{% endif %}
+      <a href="{{ url_for('routes.detalle_jugador', jugador_id=j['id']) }}">{{ j["nombre"] }} {{ j["apellidos"] }}</a>
+      {% if genero_disponible and not filtros['genero_id'] %}<span class="chip {{ 'g-f' if j['genero_id'] == 2 else 'g-m' }}">{{ 'F' if j['genero_id'] == 2 else 'M' }}</span>{% endif %}
+    </td>
+    <td>{% if j["posicion"] %}<span class="chip pos-{{ j['posicion']|lower|replace('í','i')|replace('á','a')|replace('é','e')|replace('ó','o')|replace('ú','u')|replace(' ','-') }}">{{ j["posicion"] }}</span>{% else %}-{% endif %}</td>
+    <td>{{ j["estado"] or "-" }}</td>
+    <td>{{ j["equipo_actual"] or "-" }}</td>
+    <td>{{ j["nacionalidad"] or "-" }}</td>
+    <td>{{ (j["altura_cm"] ~ " cm") if j["altura_cm"] else "-" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+<p class="contador">
+  {{ total_filtrados }} jugador(es) encontrado(s) · mostrando {{ (pagina - 1) * por_pagina + 1 }}–{{ (pagina - 1) * por_pagina + jugadores|length }}
+</p>
+{% if paginas > 1 %}
+{% set ini = [pagina - 2, 1]|max %}
+{% set fin = [ini + 4, paginas]|min %}
+{% set ini = [fin - 4, 1]|max %}
+<nav class="paginacion" aria-label="Paginación">
+  {% if pagina > 1 %}<a href="{{ url_for('routes.index', pagina=pagina - 1, **args_sin_pagina) }}">‹ Anterior</a>{% else %}<span class="off">‹ Anterior</span>{% endif %}
+  {% if ini > 1 %}<a href="{{ url_for('routes.index', pagina=1, **args_sin_pagina) }}">1</a>{% if ini > 2 %}<span class="off">…</span>{% endif %}{% endif %}
+  {% for n in range(ini, fin + 1) %}
+  <a href="{{ url_for('routes.index', pagina=n, **args_sin_pagina) }}" class="{{ 'on' if n == pagina }}">{{ n }}</a>
+  {% endfor %}
+  {% if fin < paginas %}{% if fin < paginas - 1 %}<span class="off">…</span>{% endif %}<a href="{{ url_for('routes.index', pagina=paginas, **args_sin_pagina) }}">{{ paginas }}</a>{% endif %}
+  {% if pagina < paginas %}<a href="{{ url_for('routes.index', pagina=pagina + 1, **args_sin_pagina) }}">Siguiente ›</a>{% else %}<span class="off">Siguiente ›</span>{% endif %}
+</nav>
+{% endif %}
+{% else %}
+<p>No se han encontrado jugadores con esos filtros.</p>
+{% endif %}
+{% endblock %}

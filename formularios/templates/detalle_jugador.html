@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block titulo %}{{ jugador["nombre"] }} {{ jugador["apellidos"] }}{% endblock %}
+{% block content %}
+<div class="ficha-cabecera">
+  {% if jugador["foto_url"] %}
+  <img src="{{ jugador['foto_url'] }}" alt="Foto de {{ jugador['nombre'] }} {{ jugador['apellidos'] }}" class="ficha-foto">
+  {% endif %}
+  <div>
+    <h1>{{ jugador["nombre"] }} {{ jugador["apellidos"] }}</h1>
+    <div class="ficha-etiquetas">
+      {% if 'genero_id' in jugador.keys() %}<span class="chip">{{ 'Femenino' if jugador['genero_id'] == 2 else 'Masculino' }}</span>{% endif %}
+      {% if jugador["posicion"] %}<span class="chip">{{ jugador["posicion"] }}</span>{% endif %}
+      {% if jugador["estado"] %}<span class="chip">{{ jugador["estado"] }}</span>{% endif %}
+      {% if jugador["nacionalidad"] %}<span class="chip">{{ jugador["nacionalidad"] }}</span>{% endif %}
+      {% if jugador["altura_cm"] %}<span class="chip">{{ jugador["altura_cm"] }} cm</span>{% endif %}
+      {% if jugador["peso_kg"] %}<span class="chip">{{ jugador["peso_kg"] }} kg</span>{% endif %}
+      {% if jugador["fecha_nacimiento"] %}<span class="chip">Nac. {{ jugador["fecha_nacimiento"] }}</span>{% endif %}
+    </div>
+  </div>
+</div>
+<div class="ficha-acciones">
+  <a href="{{ url_for('routes.editar_jugador', jugador_id=jugador['id']) }}">✎ Editar jugador</a>
+  <a href="{{ url_for('routes.nueva_lesion', jugador_id=jugador['id']) }}">＋ Añadir lesión</a>
+  <a href="{{ url_for('routes.nuevo_dato_economico', jugador_id=jugador['id']) }}">＋ Añadir dato económico</a>
+</div>
+
+<div class="pestanas" role="tablist">
+  <a href="#estadisticas" data-tab="estadisticas" class="on">Estadísticas <span class="n">{{ estadisticas|length }}</span></a>
+  <a href="#trayectoria" data-tab="trayectoria">Trayectoria <span class="n">{{ trayectoria|length }}</span></a>
+  <a href="#lesiones" data-tab="lesiones">Lesiones <span class="n">{{ lesiones|length }}</span></a>
+  <a href="#economico" data-tab="economico">Económico <span class="n">{{ economicos|length }}</span></a>
+</div>
+
+<section class="pestana on" id="tab-estadisticas">
+<div class="grafico-caja" id="caja-grafico" hidden>
+  <div class="grafico-cab">
+    <h3>Evolución por temporada</h3>
+    <div class="segmentado" id="metricas" role="tablist" aria-label="Métrica del gráfico">
+      <a href="#" data-m="puntos" class="on">Puntos</a>
+      <a href="#" data-m="rebotes">Rebotes</a>
+      <a href="#" data-m="asistencias">Asistencias</a>
+      <a href="#" data-m="pir">Valoración</a>
+    </div>
+  </div>
+  <div class="grafico-lienzo"><canvas id="grafico-evolucion"></canvas></div>
+  <p class="grafico-nota">Promedio por partido (valoración = PIR medio). Una línea por competición.</p>
+</div>
+
+<h2>Estadísticas por temporada</h2>
+{% if estadisticas %}
+<div class="tabla-scroll">
+<table>
+  <tr>
+    <th>Temporada</th><th>Equipo</th><th>PJ</th><th>Titular</th>
+    <th>Puntos</th><th>Máx</th>
+    <th>T2 (C/I, %)</th><th>T3 (C/I, %)</th><th>TL (C/I, %)</th>
+    <th>Rebotes (Ofe/Def)</th><th>Asist.</th>
+    <th>Robos</th><th>Tapones</th><th>Pérdidas</th><th>Faltas</th>
+    <th>+/-</th><th>Val.</th><th>V-D</th>
+  </tr>
+  {% for e in estadisticas %}
+  <tr>
+    <td>{{ e["temporada"] }}</td>
+    <td>{{ e["equipo"] or "-" }}</td>
+    <td>{{ e["partidos_jugados"] or "-" }}</td>
+    <td>{{ e["partidos_titular"] if e["partidos_titular"] is not none else "-" }}</td>
+    <td>{{ e["puntos_promedio"] or "-" }}</td>
+    <td>{{ e["puntos_max"] if e["puntos_max"] is not none else "-" }}</td>
+    <td>{{ e["t2_convertidos"] if e["t2_convertidos"] is not none else "-" }}/{{ e["t2_intentados"] if e["t2_intentados"] is not none else "-" }} ({{ e["porcentaje_tiro2"] or "-" }}%)</td>
+    <td>{{ e["t3_convertidos"] if e["t3_convertidos"] is not none else "-" }}/{{ e["t3_intentados"] if e["t3_intentados"] is not none else "-" }} ({{ e["porcentaje_tiro3"] or "-" }}%)</td>
+    <td>{{ e["tl_convertidos"] if e["tl_convertidos"] is not none else "-" }}/{{ e["tl_intentados"] if e["tl_intentados"] is not none else "-" }} ({{ e["porcentaje_tiro_libre"] or "-" }}%)</td>
+    <td>{{ e["rebotes_promedio"] or "-" }} ({{ e["rebotes_ofensivos_totales"] if e["rebotes_ofensivos_totales"] is not none else "-" }}/{{ e["rebotes_defensivos_totales"] if e["rebotes_defensivos_totales"] is not none else "-" }})</td>
+    <td>{{ e["asistencias_promedio"] or "-" }}</td>
+    <td>{{ e["robos_totales"] if e["robos_totales"] is not none else "-" }}</td>
+    <td>{{ e["tapones_totales"] if e["tapones_totales"] is not none else "-" }}</td>
+    <td>{{ e["perdidas_totales"] if e["perdidas_totales"] is not none else "-" }}</td>
+    <td>{{ e["faltas_totales"] if e["faltas_totales"] is not none else "-" }}</td>
+    <td>{{ e["mas_menos_promedio"] if e["mas_menos_promedio"] is not none else "-" }}</td>
+    <td>{{ e["valoracion_pir"] or "-" }}</td>
+    <td>{{ e["victorias"] if e["victorias"] is not none else "-" }}-{{ e["derrotas"] if e["derrotas"] is not none else "-" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+</div>
+<p><small>Los totales de rebotes ofe/def, tapones recibidos, mates, faltas recibidas y "5i" (titular) son estimaciones a partir del promedio por partido publicado por la fuente, no el dato exacto.</small></p>
+{% else %}
+<p>Sin estadísticas registradas.</p>
+{% endif %}
+
+<h2>Totales de carrera</h2>
+{% if carrera %}
+<table>
+  <tr>
+    <th>Competición</th><th></th><th>PJ</th><th>Titular</th>
+    <th>Puntos</th><th>Máx</th>
+    <th>T2 (C/I, %)</th><th>T3 (C/I, %)</th><th>TL (C/I, %)</th>
+    <th>Rebotes (Ofe/Def)</th><th>Asist.</th>
+    <th>Robos</th><th>Tapones (F/C)</th><th>Mates</th><th>Pérdidas</th><th>Faltas (C/R)</th>
+    <th>+/-</th><th>Val.</th><th>V-D</th>
+  </tr>
+  {% for c in carrera %}
+  <tr>
+    <td>{{ c["competicion"] or "-" }}</td>
+    <td><strong>{{ c["tipo_fila"] }}</strong></td>
+    <td>{{ c["partidos_jugados"] | num }}</td>
+    <td>{{ c["partidos_titular"] | num }}</td>
+    <td>{{ c["puntos"] | num }}</td>
+    <td>{{ c["puntos_max"] | num }}</td>
+    <td>{{ c["t2_convertidos"] | num }}/{{ c["t2_intentados"] | num }} ({{ c["porcentaje_tiro2"] | num }}%)</td>
+    <td>{{ c["t3_convertidos"] | num }}/{{ c["t3_intentados"] | num }} ({{ c["porcentaje_tiro3"] | num }}%)</td>
+    <td>{{ c["tl_convertidos"] | num }}/{{ c["tl_intentados"] | num }} ({{ c["porcentaje_tiro_libre"] | num }}%)</td>
+    <td>{{ c["rebotes"] | num }} ({{ c["rebotes_ofensivos"] | num }}/{{ c["rebotes_defensivos"] | num }})</td>
+    <td>{{ c["asistencias"] | num }}</td>
+    <td>{{ c["robos"] | num }}</td>
+    <td>{{ c["tapones_favor"] | num }}/{{ c["tapones_contra"] | num }}</td>
+    <td>{{ c["mates"] | num }}</td>
+    <td>{{ c["perdidas"] | num }}</td>
+    <td>{{ c["faltas_cometidas"] | num }}/{{ c["faltas_recibidas"] | num }}</td>
+    <td>{{ c["mas_menos"] | num }}</td>
+    <td>{{ c["valoracion_pir"] | num }}</td>
+    <td>{{ c["victorias"] | num }}-{{ c["derrotas"] | num }}</td>
+  </tr>
+  {% endfor %}
+</table>
+<p><small>"Totales" y "Promedios" son los valores publicados por la fuente (no estimaciones): sumas de toda la carrera en esa competición y promedio real por partido, respectivamente.</small></p>
+{% else %}
+<p>Sin totales de carrera registrados.</p>
+{% endif %}
+
+</section>
+
+<section class="pestana" id="tab-trayectoria">
+{% if trayectoria %}
+<table>
+  <tr><th>Temporada</th><th>Equipo</th><th>Movimiento</th><th>Dorsal</th></tr>
+  {% for t in trayectoria %}
+  <tr>
+    <td>{{ t["temporada"] }}</td>
+    <td>{{ t["equipo"] }}</td>
+    <td>{{ t["tipo_movimiento"] or "-" }}</td>
+    <td>{{ t["dorsal"] or "-" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>Sin trayectoria registrada.</p>
+{% endif %}
+
+</section>
+
+<section class="pestana" id="tab-lesiones">
+{% if lesiones %}
+<table>
+  <tr><th>Inicio</th><th>Fin</th><th>Tipo</th><th>Zona</th><th>Gravedad</th><th>Estado</th></tr>
+  {% for l in lesiones %}
+  <tr>
+    <td>{{ l["fecha_inicio"] }}</td>
+    <td>{{ l["fecha_fin_real"] or l["fecha_fin_estimada"] or "-" }}</td>
+    <td>{{ l["tipo_lesion"] or "-" }}</td>
+    <td>{{ l["zona_corporal"] or "-" }}</td>
+    <td>{{ l["gravedad"] or "-" }}</td>
+    <td>{{ l["estado"] or "-" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>Sin lesiones registradas.</p>
+{% endif %}
+
+</section>
+
+<section class="pestana" id="tab-economico">
+{% if economicos %}
+<table>
+  <tr><th>Temporada</th><th>Equipo</th><th>Contrato</th><th>Salario</th><th>Fiabilidad</th></tr>
+  {% for d in economicos %}
+  <tr>
+    <td>{{ d["temporada"] }}</td>
+    <td>{{ d["equipo"] or "-" }}</td>
+    <td>{{ d["tipo_contrato"] or "-" }}</td>
+    <td>{% if d["salario_estimado"] %}{{ d["salario_estimado"] }} {{ d["moneda"] }}{% else %}-{% endif %}</td>
+    <td>{{ d["fiabilidad"] or "-" }}</td>
+  </tr>
+  {% endfor %}
+</table>
+{% else %}
+<p>Sin datos económicos registrados.</p>
+{% endif %}
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function () {
+  /* ---------- Pestañas (recuerdan la elegida en el # de la URL) ---------- */
+  var tabs = document.querySelectorAll('.pestanas a');
+  function mostrar(nombre) {
+    if (!document.getElementById('tab-' + nombre)) nombre = 'estadisticas';
+    tabs.forEach(function (a) { a.classList.toggle('on', a.dataset.tab === nombre); });
+    document.querySelectorAll('.pestana').forEach(function (s) { s.classList.toggle('on', s.id === 'tab-' + nombre); });
+  }
+  tabs.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault(); mostrar(a.dataset.tab);
+      history.replaceState(null, '', '#' + a.dataset.tab);
+      if (a.dataset.tab === 'estadisticas') dibujar();
+    });
+  });
+  mostrar((location.hash || '').slice(1));
+
+  /* ---------- Gráfico de evolución ---------- */
+  var DATOS = {{ datos_grafico|tojson }};
+  var etiquetas = { puntos: 'Puntos', rebotes: 'Rebotes', asistencias: 'Asistencias', pir: 'Valoración (PIR)' };
+  var metrica = 'puntos', grafico = null;
+  var caja = document.getElementById('caja-grafico');
+  var temporadas = Array.from(new Set(DATOS.map(function (d) { return d.temporada; }))).sort();
+  if (!window.Chart || temporadas.length < 2) return;   /* con una sola temporada no hay evolución que mostrar */
+  caja.hidden = false;
+
+  function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function dibujar() {
+    if (!document.getElementById('tab-estadisticas').classList.contains('on')) return;
+    var comps = Array.from(new Set(DATOS.map(function (d) { return d.competicion; })));
+    var paleta = [css('--primario'), css('--acento'), css('--lima'), css('--femenino'), css('--aviso'), css('--ok')];
+    var series = comps.map(function (c, i) {
+      return {
+        label: c, borderColor: paleta[i % paleta.length], backgroundColor: paleta[i % paleta.length],
+        borderWidth: 3, pointRadius: 4, tension: .25, spanGaps: true,
+        data: temporadas.map(function (t) {
+          var f = DATOS.find(function (d) { return d.temporada === t && d.competicion === c; });
+          return f && f[metrica] != null ? f[metrica] : null;
+        })
+      };
+    });
+    var texto = css('--texto-suave'), rejilla = css('--borde');
+    if (grafico) grafico.destroy();
+    grafico = new Chart(document.getElementById('grafico-evolucion'), {
+      type: 'line',
+      data: { labels: temporadas, datasets: series },
+      options: {
+        responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { labels: { color: texto, usePointStyle: true } } },
+        scales: {
+          x: { ticks: { color: texto }, grid: { color: rejilla } },
+          y: { beginAtZero: true, title: { display: true, text: etiquetas[metrica], color: texto },
+               ticks: { color: texto }, grid: { color: rejilla } }
+        }
+      }
+    });
+  }
+  document.querySelectorAll('#metricas a').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault(); metrica = a.dataset.m;
+      document.querySelectorAll('#metricas a').forEach(function (b) { b.classList.toggle('on', b === a); });
+      dibujar();
+    });
+  });
+  /* Redibuja al cambiar el tema (botón 🌓 o cambio del sistema). */
+  new MutationObserver(dibujar).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', dibujar);
+  dibujar();
+})();
+</script>
+{% endblock %}
